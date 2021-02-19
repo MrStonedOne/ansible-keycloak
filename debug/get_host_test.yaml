@@ -1,14 +1,8 @@
-- name: Debug host data
+- name: dump all
   hosts: all
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-    host_addr: '{{ ansible_default_ipv4.address }}'
+ 
   tasks:
-    - name: Install aptitude using apt
-      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
-
-    - name: Install required system packages
-      apt: name={{ item }} state=latest update_cache=yes
-      loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'gnupg-agent', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools' ]
-    
-    - debug: var=host_addr
+    - name: Print some debug information 
+      debug:
+        var: vars
+      tags: debug_info
