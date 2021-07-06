@@ -1,0 +1,3 @@
+dependencies:
+  - docker
+  - role: traefik_deployment

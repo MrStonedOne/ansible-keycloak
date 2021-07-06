@@ -1,0 +1,42 @@
+http:
+  # Add the sandbox routers
+  routers:
+    "sandbox-main-https":
+      entryPoints:
+        - "https"
+      service: "sandbox-service-201"
+      rule: "HostRegexp(`sandbox.{{core_domain_name}}`)"
+      tls:
+        certResolver: "letsencrypt-dns"
+        domains:
+          - main: "*.sandbox.{{core_domain_name}}"
+            sans:
+            {% for i in range(200, 255) %}
+              - "*.sandbox-{{i}}.{{core_domain_name}}"
+            {% endfor %}
+        
+    {% for i in range(200, 255) %}
+    "sandbox-router-{{i}}-https":
+      entryPoints:
+        - "https"
+      service: "sandbox-service-{{i}}"
+      rule: "HostRegexp(`{subdomain:[a-z]+.}sandbox-{{i}}.{{core_domain_name}}`)"
+      tls:
+        domains:
+          - main: "sandbox-{{i}}.{{core_domain_name}}"
+            sans: 
+              - "*.sandbox-{{i}}.{{core_domain_name}}"
+    "sandbox-router-{{i}}-http":
+      entryPoints:
+        - "http"
+      service: "sandbox-service-{{i}}"
+      rule: "HostRegexp(`{subdomain:[a-z]+.}sandbox-{{i}}.{{core_domain_name}}`)"
+    {% endfor %}
+  # Add the sandbox services
+  services:
+  {% for i in range(200, 255) %}
+    "sandbox-service-{{i}}":
+      loadBalancer:
+        servers:
+          - url: "http://{{sandbox_subnet_prefix}}.{{'%02d' % i}}"
+  {% endfor %}

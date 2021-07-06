@@ -1,0 +1,52 @@
+- name: Create Postgres database storage directory
+  file:
+    path: '{{ postgres_data_directory }}'
+    state: directory
+    mode: '0740'
+
+- name: Create keycloak container stack
+  include_role:
+    name: 'docker_stack_create'
+  vars:
+    stack_name: '{{ keycloak_stack_name }}'
+    service_imbude:
+      traefik:
+        keycloak:
+          auth:
+            enabled: TRUE
+            route_rule: '{{ keycloak_traefik_rule }}'
+            service_port: 8080
+            sticky_loadbalance: TRUE
+    compose:
+      version: "3.2"
+      services:
+        postgres:
+          image: "{{ postgres_container_image }}"
+          deploy:
+            placement:
+              constraints: [ node.role == manager ]
+          volumes:
+            - '{{ postgres_data_directory }}:/var/lib/postgresql/data'
+          ports:
+            - '{{ postgres_external_port }}:5432'
+          environment:
+            POSTGRES_DB: '{{ postgres_db }}'
+            POSTGRES_USER: '{{ postgres_user }}'
+            POSTGRES_PASSWORD: '{{ postgres_password }}'
+        keycloak:
+          image: '{{ keycloak_container_image }}' # See https://github.com/ivangfr/keycloak-clustered
+          deploy:
+            mode: global
+          ports:
+            - '7600:7600' # Used for inter-host communications for clustered mode
+          environment:
+            KEYCLOAK_USER: '{{ default_keycloak_user }}'
+            KEYCLOAK_PASSWORD: '{{ default_keycloak_password }}'
+            KEYCLOAK_FRONTEND_URL: '{{ keycloak_frontend_url }}'
+            DB_VENDOR: postgres
+            DB_ADDR: '{{ postgres_address }}'
+            DB_DATABASE: '{{ postgres_db }}'
+            DB_USER: '{{ postgres_user }}'
+            DB_PASSWORD: '{{ postgres_password }}'
+            JGROUPS_DISCOVERY_PROTOCOL: JDBC_PING
+            JGROUPS_DISCOVERY_PROPERTIES=datasource_jndi_name: java:jboss/datasources/KeycloakDS
